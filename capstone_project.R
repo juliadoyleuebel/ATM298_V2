@@ -35,7 +35,6 @@ countries_mentions <- policies_filtered %>%
       "Laos" = "Lao People's Democratic Republic",
       "North Korea" = "Dem. People's Rep. Korea",
       "Russia" = "Russian Federation",
-      "United States of America" = "United States",
       "São Tomé and Príncipe" = "Sao Tome and Principe",
       "South Korea" = "Republic of Korea",
       "Türkiye" = "Turkey",
@@ -43,9 +42,11 @@ countries_mentions <- policies_filtered %>%
       "Côte d’Ivoire" = "Côte d'Ivoire",
       "European Union" = NA_character_,
       "Europe" = NA_character_,
-      .default = Country
+      .default = Country # figure out what this does
     )
-  )
+  ) %>%
+filter(!is.na(Country_clean)) %>% # i don't think we want to exclude NAs
+  count(Country_clean, name = "Mentions")
 
 # world map
 world <- ne_countries(scale = "large", returnclass = "sf")
@@ -70,7 +71,7 @@ print(unmatched)
 ggplot(world_policies) +
   geom_sf(aes(fill = Mentions), color = "grey70", size = 0.1) +
   scale_fill_gradientn(
-    colours = c("#fee6ce", "#f0733d", "#fd5a1a"), # darken the top value
+    colours = c("#fee6ce", "#f0733d", "#fd5a1a"), # darken the top value # we can probably choose a diff gradient now
     na.value = "grey90",
     name = "Number of Policies per Country"
   ) +
