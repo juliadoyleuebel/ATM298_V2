@@ -19,34 +19,53 @@ policies_filtered = policy_list %>%
   select("Name of Policy/Program", "Country")
 policies_filtered
 
-# standardize country names # i think this is where we should put Europe and EU
-countries_mentions <- policies_filtered %>%
+eu_countries <- c(
+  "Austria","Belgium","Bulgaria","Croatia","Cyprus","Czech Republic",
+  "Denmark","Estonia","Finland","France","Germany","Greece","Hungary",
+  "Ireland","Italy","Latvia","Lithuania","Luxembourg","Malta",
+  "Netherlands","Poland","Portugal","Romania","Slovakia","Slovenia",
+  "Spain","Sweden"
+)
+
+europe_countries <- ne_countries(
+  continent = "Europe",
+  returnclass = "sf"
+)$name_long
+
+# standardize country names
+normal <- policies_filtered %>%
   mutate(
     Country = str_trim(Country),
     Country_clean = recode(
       Country,
-      "USA" = "United States of America",
+      "USA" = "United States",
+      "United States of America" = "United States",
       "The Netherlands" = "Netherlands",
-      "Brunei" = "Brunei Darussalam",
-      "Congo" = "Republic of the Congo",
       "Czechia" = "Czech Republic",
-      "Swaziland" = "Eswatini",
-      "Gambia" = "The Gambia",
-      "Laos" = "Lao People's Democratic Republic",
-      "North Korea" = "Dem. People's Rep. Korea",
       "Russia" = "Russian Federation",
-      "São Tomé and Príncipe" = "Sao Tome and Principe",
-      "South Korea" = "Republic of Korea",
       "Türkiye" = "Turkey",
-      "Eswatini" = "Kingdom of eSwatini",
-      "Côte d’Ivoire" = "Côte d'Ivoire",
-      "European Union" = NA_character_,
-      "Europe" = NA_character_,
-      .default = Country # figure out what this does
+      "South Korea" = "Republic of Korea",
+      .default = Country
     )
   ) %>%
-filter(!is.na(Country_clean)) %>% # i don't think we want to exclude NAs
+  filter(!Country_clean %in% c("Europe", "European Union"))
+
+eu_rows <- policies_filtered %>%
+  filter(Country == "European Union") %>%
+  tidyr::expand_grid(Country_clean = eu_countries)
+  
+europe_rows <- policies_filtered %>%
+  filter(Country == "Europe") %>%
+  tidyr::expand_grid(Country_clean = europe_countries)
+
+countries_mentions <- bind_rows(
+  normal %>% select(Country_clean),
+  eu_rows %>% select(Country_clean),
+  europe_rows %>% select(Country_clean)
+) %>%
   count(Country_clean, name = "Mentions")
+
+sum(countries_mentions$Mentions)
 
 # world map
 world <- ne_countries(scale = "large", returnclass = "sf")
@@ -71,14 +90,14 @@ print(unmatched)
 ggplot(world_policies) +
   geom_sf(aes(fill = Mentions), color = "grey70", size = 0.1) +
   scale_fill_gradientn(
-    colours = c("#fee6ce", "#f0733d", "#fd5a1a"), # darken the top value # we can probably choose a diff gradient now
+    colours = c("#feebe2","#fbb4b9","#f768a1", "#c51b8a"), #from colorbrewer
     na.value = "grey90",
-    name = "Number of Policies per Country"
+    name = "Number of policies\nper country"
   ) +
   labs(
-    title = "Global Embodied Carbon Policies",
-    #    subtitle = "Aggregated by Country",
-    #    caption = "Sources: Carbon Leadership Forum, C40 Cities"
+    title = "Embodied Carbon Policies",
+  subtitle = "Aggregated by country",
+  caption = "Sources: Carbon Leadership Forum, C40 Cities"
   ) +
   theme_minimal() +
   theme(
